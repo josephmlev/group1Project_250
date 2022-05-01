@@ -43,5 +43,5 @@ def importData (path = ('./data/')):
     covStat = np.diag(dataDf['dmb'])
     
     covTotal = covStat + covSys
-    return(dataDF, covSys, covStat, covTotal)
+    return(dataDf, covSys, covStat, covTotal)
 
