@@ -10,4 +10,4 @@ import numpy as np
 import pandas as pd
 import functions as funs
 
-myData = funs.dataObject()
+myData = funs.dataObject(covType = 'tot')
