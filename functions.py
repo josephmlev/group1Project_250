@@ -20,13 +20,22 @@ class dataObject:
         Pandas DF: dataDf
         data frame with columns for zcmb, mb, and dmb. 40 rows
         
-        covSys: np array
+        zcmb: np 1D array
+        redshift data.
+        
+        mb: np 1D array
+        luminosity measurement.
+        
+        dmb np 1D array
+        error on luminosity measurement.
+        
+        covSys: np 2D array
         40x40 systamatic covariance matrix
         
-        covStat: np array
+        covStat: np 2D array
         40x40 diagonal statistical covariance matrix
         
-        covTotal: np array
+        covTotal: np 2D array
         40x40 total covariance matrix. Sum of covStat + covSys
         '''
         
@@ -63,6 +72,10 @@ class dataObject:
                                'Unnamed: 19'], 
                               axis = 1)
         
+        self.zcmb = np.asarray(self.dataDf['zcmb'])
+        self.mb = np.asarray(self.dataDf['mb'])
+        self.dmb = np.asarray(self.dataDf['dmb'])        
+
         #import raw systamatic cov list. Drop first element 
         #(first element is 40, refering to size of matrix)
         sysRaw = np.loadtxt(self.path+'sys_DS17f.txt', skiprows = 1)
