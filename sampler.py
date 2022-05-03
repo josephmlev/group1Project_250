@@ -28,11 +28,8 @@ def mcmc_sampler(data, t_max):
     # Omega_lambda = [0,1]
     # M = [-25,-15] 
 
-
-    #params_init = np.array([rand.uniform(50,100),rand.uniform(0,1),rand.uniform(0,1),rand.uniform(-25,-15)])
+    params_init = np.array([rand.uniform(50,100),rand.uniform(0,1),rand.uniform(0,1),rand.uniform(-25,-15)])
     
-    params_init = [50,0.01,0.01,-25]
-
     # Log likelihood is associated with parameter sample to avoid calculating multiple times
     params_init = np.append(params_init,funs.loglike(params_init,data))
     
@@ -72,50 +69,16 @@ def metropolis_hastings(params_prev,sigmas,data):
 
     params_new = np.random.multivariate_normal(params_prev[0:4], np.diag(sigmas))
 
-    print(params_new)
-
     while params_new[1] < 0 or params_new[2] < 0:
         params_new = np.random.multivariate_normal(params_prev[0:4], np.diag(sigmas))
 
-    P_t = params_prev[-1]    
-    P_new = funs.loglike(params_new,data)
-    params_new = np.append(params_new,P_new)
+    g_t_new = params_prev[-1]    
+    g_new_t = funs.loglike(params_new,data)
+    params_new = np.append(params_new,g_new_t)
 
-    g_t_new = generating_function(params_prev[0:4],params_new[0:4],sigmas,data)
-    g_new_t = generating_function(params_new[0:4],params_prev[0:4],sigmas,data)
-
-    accept_prob = np.min([1, P_new / P_t * g_t_new / g_new_t])
+    accept_prob = np.min([1, g_t_new / g_new_t])
     
     if np.random.uniform() > accept_prob:
-        print('reject')
         return params_prev
     else:
-        print('accept')
         return params_new
-
-def generating_function(params_prev,params_new,sigmas,data):
-    '''
-    Generating function for cosmological data
-    
-    Parameters:
-    --------------------
-    params_prev: 1D array
-        Previous set of parameters [0:3] and their log likelihood [4] 
-
-    params_new: 1D array
-        New set of parameters under consideration [0:3] and their log likelihood [4] 
-
-    sigmas: 1D array
-        Variance for each cosmological parameter [0:3]
-
-    data: dataObject
-        Cosmological data, including redshift (z), which is needed for model
-    
-    Return:
-    --------------------
-    new_params: 1D array
-        List of new set of parameters [0:3] and their log likelihood [4]
-    '''
-
-    return(1.0)
-    #params_new = np.random.Generator.multivariate_normal(params_prev[0:4], data.cov)
