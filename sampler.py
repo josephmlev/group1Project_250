@@ -1,84 +1,113 @@
+from cmath import nan
 import numpy as np
+import numpy.random as rand
+import functions as funs
 
-def gaussian_generator(mean, variance):
+def mcmc_sampler(data, t_max, sigmas = [0.1,0.01,0.01,0.01]):
+    '''
+    Create a Markov chain for cosmological parameters
+    
+    Parameters:
+    --------------------
+    data: dataObject
+        Cosmological data, including redshift (z) and covariance matrix
 
-    x = np.random.normal(mean, variance)
+    t_max: int
+        Length of Markov chain
+    
+    Return:
+    --------------------
+    params_chain: 2D array
+        List of parameter values calculated by MCMC. Dimensions are 4 x t_max.
+        params = [H0, Om_matter, Om_lambda, M]
+        The order of parameters is [Hubble constant, matter density, dark energy density, absolute magnitude]
+    '''
 
-    return x
+    # Initial parameter distribution is uniform over:
+    # H_0 = [50,100]
+    # Omega_m = [0,1]
+    # Omega_lambda = [0,1]
+    # M = [-25,-15] 
 
-def bayes_probability(a, xs):
+    params_init = np.array([rand.uniform(50,100),rand.uniform(0,1),rand.uniform(0,1),rand.uniform(-25,-15)])
+    
+    # Log likelihood is associated with parameter sample to avoid calculating multiple times
+    params_init = np.append(params_init,funs.loglike(params_init,data))
+    
+    # Building the chain of parameter sets for t_max timesteps
+    params_chain = np.array([params_init])
 
-    prob = (1/(a * np.sqrt(2 * np.pi)))**(len(xs))
+    for t in np.arange(1,t_max):
 
-    for x in xs:
-        prob = prob * np.exp(-x**2/(2*a**2))
-
-    return prob
-
-def bayes_distribution(variance, a_vals, num_samples):
-
-    xs = []
-
-    for _ in range(num_samples):
-        xs.append(gaussian_generator(0,variance))
-
-    probs = []
-    for i in range(len(a_vals)):
-        probs.append(bayes_probability(a_vals[i], xs)/len(a_vals))
-
-    plt.hist(xs)
-    plt.show()
-
-    return probs
-
-def generating_gaussian(a_prime, a_t, sigma):
-    return 1/(np.sqrt(2*np.pi)*sigma)*np.exp(-(a_prime - a_t)**2/(2*sigma**2))
-
-def metropolis_hastings(a_vals, max_a, posterior_dist):
-
-    sigma = 0.2
-    a_0 = np.random.choice(a_vals)
-    t_max = 10000
-
-    a_path = [a_0]
-
-    for _ in np.arange(0,t_max):
+        params_new = metropolis_hastings(params_chain[-1],sigmas,data)
+        params_chain = np.insert(params_chain,t,params_new,axis=0)
         
-        a_prime = gaussian_generator(a_path[-1], sigma)
-        while a_prime <= 0 or a_prime > max_a:
-            a_prime = gaussian_generator(a_path[-1], sigma)
-        
-        P_xprime = posterior_dist[int(np.floor(a_prime*len(a_vals)/max_a))]
-        P_xt = posterior_dist[int(np.floor(a_path[-1]*len(a_vals)/max_a))]
-        g_xt_xprime = generating_gaussian(a_path[-1],a_prime,sigma)
-        g_xprime_xt = generating_gaussian(a_prime,a_path[-1],sigma)
+    return params_chain[:,0:4]
 
-        accept_prob = np.min([1, P_xprime / P_xt * g_xt_xprime / g_xprime_xt])
-        
-        if np.random.uniform() > accept_prob:
-            a_path.append(a_path[-1])
-        else:
-            a_path.append(a_prime)
+def metropolis_hastings(params_prev,sigmas,data):
+    '''
+    Create new parameter sample and decide whether to accept or reject
+    
+    Parameters:
+    --------------------
+    params_prev: 1D array
+        Previous set of parameters [0:4] and their log likelihood [4] 
 
-    return a_path
+    sigmas: 1D array
+        Variance for each cosmological parameter [0:4]
 
-num_samples = 100
-actual_variance = 3
-num_as = 20000
-max_a = 10
+    data: dataObject
+        Cosmological data, including redshift (z) and covariance matrix
+    
+    Return:
+    --------------------
+    new_params: 1D array
+        List of new set of parameters [0:4] and their log likelihood [4]
+    '''
 
-a_vals = np.linspace(max_a/num_as,max_a,num_as)
+    params_new = np.random.multivariate_normal(params_prev[0:4], np.diag(sigmas))
 
-posterior_distribution = bayes_distribution(actual_variance, a_vals, num_samples)
+    while params_new[1] < 0 or params_new[2] < 0:
+        params_new = np.random.multivariate_normal(params_prev[0:4], np.diag(sigmas))
 
-plt.plot(a_vals, posterior_distribution)
-plt.show()
+    loglike_prev = params_prev[-1]    
+    loglike_new = funs.loglike(params_new,data)
+    
+    accept_prob = prior_dist_prob(params_new) * np.exp(np.min([0, loglike_new-loglike_prev]))
 
-path = metropolis_hastings(a_vals, max_a, posterior_distribution)
+    if np.random.uniform() > accept_prob or np.isnan(accept_prob):
+        return params_prev
+    else:
+        params_new = np.append(params_new,loglike_new)
+        return params_new
 
-plt.plot(path)
-plt.show()
+def prior_dist_prob(params):
+    '''
+    Returns the probability of the parameter values given a uniform prior
+    
+    Parameters:
+    --------------------
+    params: 1D array
+        Set of parameters for which to evaluate the prior 
 
-plt.hist(path)
-plt.axvline(x=actual_variance, color='r')
-plt.show()
+    Return:
+    --------------------
+    prob: float
+        Probability from prior distribution for given parameters
+    '''
+    # Initial parameter distribution is uniform over:
+    # H_0 = [50,100]
+    # Omega_m = [0,1]
+    # Omega_lambda = [0,1]
+    # M = [-25,-15] 
+
+    if (params[0] < 50 or params[0] > 100):
+        return 0
+    elif (params[1] < 0 or params[1] > 1):
+        return 0
+    elif (params[2] < 0 or params[2] > 1):
+        return 0
+    elif (params[3] < -25 or params[3] > -15):
+        return 0
+    else:
+        return 1
