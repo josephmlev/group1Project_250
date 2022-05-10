@@ -237,7 +237,7 @@ class make_plot:
         for i in range(len(chains)):
             self.samples.append(MCSamples(samples = chains[i], names=self.name, labels=self.label, ignore_rows = burn_in))
         
-    def plot_2d(self, var_index=[0,1]):
+    def plot_2d(self, var_index=[0,1],accel_decel_line=False):
         '''
         Input:
         ---------------
@@ -246,7 +246,14 @@ class make_plot:
         '''
         i, j = var_index
         g = plots.get_single_plotter(width_inch = 10)
+        g.settings.rc_sizes(axes_fontsize=16,lab_fontsize=28,legend_fontsize=16)
         g.plot_2d(self.samples, [self.name[i], self.name[j]])
+        
+        if accel_decel_line == True:
+            g.plot_2d(self.samples, [self.name[i], self.name[j]],lims=[0,1,0,1])
+            g.add_line(xdata=[0,2],ydata=[0,1],color='cyan',ls='--')
+        else:
+           g.plot_2d(self.samples, [self.name[i], self.name[j]])
 
         g.finish_plot(legend_labels=self.legend)
     
@@ -258,6 +265,7 @@ class make_plot:
             the index of the variable to plot
         '''
         g = plots.get_single_plotter(width_inch = 10)
+        g.settings.rc_sizes(axes_fontsize=16,lab_fontsize=28,legend_fontsize=16)
         g.plot_1d(self.samples, self.name[var_index])
 
         g.finish_plot(legend_labels=self.legend)
