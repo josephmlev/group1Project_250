@@ -65,8 +65,8 @@ class dataObject:
         '''
         
 
-        if covType != 'sys' and covType != 'tot':
-            raise TypeError('covType must = "sys" or "tot"')
+        if covType != 'sys' and covType != 'tot' and covType != 'stat':
+            raise TypeError('covType must = "sys" or "stat" or "tot"')
         
         self.covType = covType
         self.path = path
@@ -97,8 +97,10 @@ class dataObject:
         
         #total cov is sum of statistical and systamatic 
         self.cov = self.covStat
-        if (self.covType == 'sys'):
+        if (self.covType == 'tot'):
             self.cov = self.covStat + self.covSys
+        elif (self.covType == 'sys'): 
+            self.cov = self.covSys
             
         self.covInv = np.linalg.inv(self.cov)
     
@@ -237,7 +239,7 @@ class make_plot:
         for i in range(len(chains)):
             self.samples.append(MCSamples(samples = chains[i], names=self.name, labels=self.label, ignore_rows = burn_in))
         
-    def plot_2d(self, var_index=[0,1],accel_decel_line=False):
+    def plot_2d(self, var_index=[0,1],accel_decel_line=False, filled=True):
         '''
         Input:
         ---------------
@@ -247,13 +249,13 @@ class make_plot:
         i, j = var_index
         g = plots.get_single_plotter(width_inch = 10)
         g.settings.rc_sizes(axes_fontsize=16,lab_fontsize=28,legend_fontsize=16)
-        g.plot_2d(self.samples, [self.name[i], self.name[j]])
+#        g.plot_2d(self.samples, [self.name[i], self.name[j]], filled=True)
         
         if accel_decel_line == True:
-            g.plot_2d(self.samples, [self.name[i], self.name[j]],lims=[0,1,0,1])
+            g.plot_2d(self.samples, [self.name[i], self.name[j]],lims=[0,1,0,1], filled=True)
             g.add_line(xdata=[0,2],ydata=[0,1],color='cyan',ls='--')
         else:
-           g.plot_2d(self.samples, [self.name[i], self.name[j]])
+           g.plot_2d(self.samples, [self.name[i], self.name[j]], filled=True)
 
         g.finish_plot(legend_labels=self.legend)
     
